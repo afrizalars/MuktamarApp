@@ -20,9 +20,12 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
@@ -32,6 +35,7 @@ import com.theartofdev.edmodo.cropper.CropImageView;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -47,6 +51,9 @@ public class SetupActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private ProgressBar setupProgress;
     private FirebaseFirestore firebaseFirestore;
+    private String user_id;
+    private FirebaseAuth firebaseAuth;
+    private boolean isChanged = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +71,43 @@ public class SetupActivity extends AppCompatActivity {
         storageReference = FirebaseStorage.getInstance().getReferenceFromUrl("gs://muktamarapp.appspot.com");
         mAuth = FirebaseAuth.getInstance();
         setupProgress = findViewById(R.id.setupProgress);
+
+        firebaseAuth = FirebaseAuth.getInstance();
+        user_id = firebaseAuth.getCurrentUser().getUid();
+
+        setupProgress.setVisibility(View.VISIBLE);
+        setupBtn.setEnabled(false);
+
+        firebaseFirestore.collection("Users").document(user_id).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+
+                if (task.isSuccessful()){
+
+                    if (task.getResult().exists()){
+                        String name = task.getResult().getString("name");
+                        String image = task.getResult().getString("image");
+
+                        mainImageUri = Uri.parse(image);
+
+                        setupName.setText(name);
+
+                        RequestOptions placeholderRequest = new RequestOptions();
+                        placeholderRequest.placeholder(R.drawable.ic_launcher_background);
+
+                        Glide.with(SetupActivity.this).setDefaultRequestOptions(placeholderRequest).load(image).into(ProfileImage);
+                    }
+
+                } else {
+                    String error = task.getException().getMessage();
+                    Toast.makeText(SetupActivity.this," error :"+error,Toast.LENGTH_SHORT).show();
+                }
+
+                setupProgress.setVisibility(View.INVISIBLE);
+                setupBtn.setEnabled(true);
+            }
+        });
+
 
         ProfileImage.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -90,50 +134,32 @@ public class SetupActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 final String username = setupName.getText().toString();
-                if (!TextUtils.isEmpty(username) && mainImageUri != null){
-                    final String user_id = mAuth.getCurrentUser().getUid();
-                    setupProgress.setVisibility(View.VISIBLE);
-                    StorageReference image_path = storageReference.child("image_profile").child(user_id+".jpg");
+                setupProgress.setVisibility(View.VISIBLE);
 
-                    image_path.putFile(mainImageUri).addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                            if (task.isSuccessful()){
-                                Uri download_uri = task.getResult().getDownloadUrl();
-                                Map<String, String> userMap = new HashMap<>();
-                                userMap.put("name", username);
-                                userMap.put("image",download_uri.toString());
+                if (isChanged ) {
+                    if (!TextUtils.isEmpty(username) && mainImageUri != null) {
+                        user_id = mAuth.getCurrentUser().getUid();
 
-                                firebaseFirestore.collection("Users").document(user_id).set(userMap).addOnCompleteListener(new OnCompleteListener<Void>() {
-                                    @Override
-                                    public void onComplete(@NonNull Task<Void> task) {
+                        StorageReference image_path = storageReference.child("image_profile").child(user_id + ".jpg");
 
-                                        if (task.isSuccessful()){
-                                            Toast.makeText(SetupActivity.this, "Profile Changed",Toast.LENGTH_SHORT).show();
+                        image_path.putFile(mainImageUri).addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
+                            @Override
+                            public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
+                                if (task.isSuccessful()) {
+                                    storeFirestore(task, username);
 
-                                            Intent mainIntent = new Intent(SetupActivity.this,MainActivity.class);
-                                            startActivity(mainIntent);
-                                            finish();
+                                } else {
+                                    String error = task.getException().getMessage();
+                                    Toast.makeText(SetupActivity.this, error, Toast.LENGTH_SHORT).show();
+                                }
 
-                                        } else {
-                                            String error = task.getException().getMessage();
-                                            Toast.makeText(SetupActivity.this, error,Toast.LENGTH_SHORT).show();
-                                        }
-                                        setupProgress.setVisibility(View.INVISIBLE);
-
-                                    }
-                                });
-
-                                Toast.makeText(SetupActivity.this, "Image is uploaded",Toast.LENGTH_SHORT).show();
-
-                            } else {
-                                String error = task.getException().getMessage();
-                                Toast.makeText(SetupActivity.this, error,Toast.LENGTH_SHORT).show();
+                                setupProgress.setVisibility(View.INVISIBLE);
                             }
+                        });
 
-                            setupProgress.setVisibility(View.INVISIBLE);
-                        }
-                    });
+                    }
+                } else {
+                    storeFirestore(null,username);
 
                 }
             }
@@ -141,6 +167,43 @@ public class SetupActivity extends AppCompatActivity {
 
 
 
+    }
+
+    private void storeFirestore(@NonNull Task<UploadTask.TaskSnapshot> task, String username) {
+
+        Uri download_uri;
+
+        if (task != null){
+            download_uri = task.getResult().getDownloadUrl();
+        } else {
+            download_uri = mainImageUri;
+        }
+
+        Map<String, String> userMap = new HashMap<>();
+        userMap.put("name", username);
+        userMap.put("image",download_uri.toString());
+
+        firebaseFirestore.collection("Users").document(user_id).set(userMap).addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+
+                if (task.isSuccessful()){
+                    Toast.makeText(SetupActivity.this, "Profile Changed",Toast.LENGTH_SHORT).show();
+
+                    Intent mainIntent = new Intent(SetupActivity.this,MainActivity.class);
+                    startActivity(mainIntent);
+                    finish();
+
+                } else {
+                    String error = task.getException().getMessage();
+                    Toast.makeText(SetupActivity.this, error,Toast.LENGTH_SHORT).show();
+                }
+                setupProgress.setVisibility(View.INVISIBLE);
+
+            }
+        });
+
+        Toast.makeText(SetupActivity.this, "Image is uploaded",Toast.LENGTH_SHORT).show();
     }
 
     private void BringImagePicker() {
@@ -160,6 +223,7 @@ public class SetupActivity extends AppCompatActivity {
 
                 mainImageUri = result.getUri();
                 ProfileImage.setImageURI(mainImageUri);
+                isChanged = true;
 
             } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
                 Exception error = result.getError();
