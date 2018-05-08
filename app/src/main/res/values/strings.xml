@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">MuktamarApp</string>
+    <string name="action_setting_text">Setting</string>
+    <string name="action_logout_text">Logout</string>
+    <string name="action_search_text">search</string>
+    <string name="action_setting">setting</string>
+    <string name="action_logout">logout</string>
+</resources>

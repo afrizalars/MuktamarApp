@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "557035920552",
+    "firebase_url": "https://muktamarapp.firebaseio.com",
+    "project_id": "muktamarapp",
+    "storage_bucket": "muktamarapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:557035920552:android:79653d0d2afae921",
+        "android_client_info": {
+          "package_name": "com.example.afrizalars.muktamarapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "557035920552-ej5pkfooosdoldnhkuhtpcb1q3gdokl4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.afrizalars.muktamarapp",
+            "certificate_hash": "51fcb75735d8c26c0cc59613b0b28dcce297719c"
+          }
+        },
+        {
+          "client_id": "557035920552-489fsue2ghibun5qkdhb6h0ndqs1mv9t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7q4RrJLL1h3Iqbhzi2DxNqVkl-qsyOQg"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "557035920552-489fsue2ghibun5qkdhb6h0ndqs1mv9t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
